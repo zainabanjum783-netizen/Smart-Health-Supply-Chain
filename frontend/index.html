@@ -1,0 +1,687 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Smart Health & Supply Chain - PHC Resource & Shortage Prevention</title>
+  
+  <!-- Bundled vendor styles & scripts -->
+  <link rel="stylesheet" href="vendor/leaflet.css">
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+
+  <!-- ====================================================================
+       TOP HEADER
+       ==================================================================== -->
+  <header class="top-header">
+    <div class="brand-section">
+      <div class="brand-icon">⚕</div>
+      <div class="brand-text">
+        <h1>Smart Health & Supply Chain</h1>
+        <div class="subheading">Primary Health Centre Resource & Shortage Prevention System</div>
+      </div>
+    </div>
+    <div class="header-meta">
+      <div class="data-badge">
+        <span class="pulse-dot"></span>
+        <span>18 Sep 2026 | Demonstration Environment</span>
+      </div>
+      <div class="data-badge" style="background: rgba(13, 148, 136, 0.2); border-color: rgba(13, 148, 136, 0.4); color: #99f6e4;">
+        Synthetic Operational Dataset
+      </div>
+      <button class="btn-reset" onclick="window.appResetDatabase()" title="Reset database to initial pristine state">
+        ↺ Reset Demo Data
+      </button>
+    </div>
+  </header>
+
+  <!-- ====================================================================
+       PERSISTENT TOP NAVIGATION
+       ==================================================================== -->
+  <nav class="nav-bar">
+    <ul class="nav-links">
+      <li class="nav-item active" data-view="overview">
+        <a class="nav-link" onclick="window.appSwitchView('overview')">Overview</a>
+      </li>
+      <li class="nav-item" data-view="dashboard">
+        <a class="nav-link" onclick="window.appSwitchView('dashboard')">Dashboard</a>
+      </li>
+      <li class="nav-item" data-view="inventory">
+        <a class="nav-link" onclick="window.appSwitchView('inventory')">Inventory</a>
+      </li>
+      <li class="nav-item" data-view="predictions">
+        <a class="nav-link" onclick="window.appSwitchView('predictions')">Predictions</a>
+      </li>
+      <li class="nav-item" data-view="actions">
+        <a class="nav-link" onclick="window.appSwitchView('actions')">Actions</a>
+      </li>
+      <li class="nav-item" data-view="emergency">
+        <a class="nav-link" onclick="window.appSwitchView('emergency')">Emergency</a>
+      </li>
+    </ul>
+    <div class="nav-concept-flow">
+      Core Concept: <span>Patient Footfall</span> → <span>Medicine Demand</span> → <span>Stock Prediction</span> → <span>Shortage Detection</span> → <span>Recommended Action</span>
+    </div>
+  </nav>
+
+  <!-- ====================================================================
+       MAIN CONTAINER
+       ==================================================================== -->
+  <main class="main-container">
+
+    <!-- ================================================================
+         VIEW 1: OVERVIEW (Opens Directly Here)
+         ================================================================ -->
+    <section id="view-overview" class="view-section active-view">
+      <div class="section-header">
+        <div>
+          <h2 class="section-title">PHC Network Overview</h2>
+          <div class="section-subtitle">Real-time surveillance across state Primary Health Centres & essential medicine stock</div>
+        </div>
+      </div>
+
+      <!-- 6 Dynamically Calculated Summary Cards -->
+      <div class="stats-grid-6">
+        <div class="kpi-card kpi-total">
+          <div class="kpi-title">Total PHCs</div>
+          <div class="kpi-value" id="stat-total-phcs">--</div>
+          <div class="kpi-subtext">Monitored health centres</div>
+        </div>
+        <div class="kpi-card kpi-critical">
+          <div class="kpi-title">Critical PHCs</div>
+          <div class="kpi-value" id="stat-critical-phcs" style="color: var(--status-critical-dot);">--</div>
+          <div class="kpi-subtext">🔴 Imminent stockout (&lt;3d)</div>
+        </div>
+        <div class="kpi-card kpi-alerts">
+          <div class="kpi-title">Active Alerts</div>
+          <div class="kpi-value" id="stat-active-alerts" style="color: var(--status-warning-dot);">--</div>
+          <div class="kpi-subtext">⚠️ Requiring intervention</div>
+        </div>
+        <div class="kpi-card kpi-risk">
+          <div class="kpi-title">Medicines at Risk</div>
+          <div class="kpi-value" id="stat-meds-at-risk" style="color: #ea580c;">--</div>
+          <div class="kpi-subtext">Low inventory across network</div>
+        </div>
+        <div class="kpi-card kpi-load">
+          <div class="kpi-title">High Patient Load PHCs</div>
+          <div class="kpi-value" id="stat-high-load-phcs" style="color: #7c3aed;">--</div>
+          <div class="kpi-subtext">Surge &gt;18% over baseline</div>
+        </div>
+        <div class="kpi-card kpi-shortage">
+          <div class="kpi-title">Predicted Shortages</div>
+          <div class="kpi-value" id="stat-predicted-shortages" style="color: #e11d48;">--</div>
+          <div class="kpi-subtext">Stockouts projected &lt;3 days</div>
+        </div>
+      </div>
+
+      <!-- PHC Location Map Card -->
+      <div class="map-card">
+        <div class="map-card-header">
+          <div class="map-card-title">Geographic PHC Health & Medicine Stock Distribution</div>
+          <div class="map-legend">
+            <span class="legend-item"><span class="legend-dot dot-normal"></span> 🟢 Normal (&ge;7d)</span>
+            <span class="legend-item"><span class="legend-dot dot-warning"></span> 🟡 Warning (3-7d)</span>
+            <span class="legend-item"><span class="legend-dot dot-critical"></span> 🔴 Critical (&lt;3d)</span>
+          </div>
+        </div>
+        <div id="phc-network-map"></div>
+      </div>
+    </section>
+
+    <!-- ================================================================
+         VIEW 2: DASHBOARD
+         ================================================================ -->
+    <section id="view-dashboard" class="view-section">
+      <div class="section-header">
+        <div>
+          <h2 class="section-title">PHC Network Status & Facility Drilldown</h2>
+          <div class="section-subtitle">Select any facility to analyze footfall trajectory, medicine stock levels, and consumption series</div>
+        </div>
+      </div>
+
+      <!-- Filter Bar -->
+      <div class="table-card">
+        <div class="filters-bar">
+          <div class="filter-group">
+            <span class="filter-label">Filter:</span>
+            <select id="dash-filter-state" class="select-filter" onchange="window.appFilterDashboard()">
+              <option value="">All States</option>
+            </select>
+            <select id="dash-filter-district" class="select-filter" onchange="window.appFilterDashboard()">
+              <option value="">All Districts</option>
+            </select>
+            <select id="dash-filter-status" class="select-filter" onchange="window.appFilterDashboard()">
+              <option value="ALL">All Statuses</option>
+              <option value="CRITICAL">🔴 Critical (&lt;3d)</option>
+              <option value="WARNING">🟡 Warning (3-7d)</option>
+              <option value="NORMAL">🟢 Normal (&ge;7d)</option>
+            </select>
+          </div>
+          <div class="filter-group">
+            <input type="text" id="dash-search-input" class="search-input" placeholder="Search PHC name or district..." onkeyup="window.appSearchDashboard()">
+          </div>
+        </div>
+
+        <!-- PHC Status Table -->
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>PHC Name</th>
+              <th>District</th>
+              <th>State</th>
+              <th>Patient Footfall</th>
+              <th>Medicine Status</th>
+              <th>Overall Status</th>
+              <th>Action</th>
+            </tr>
+          </thead>
+          <tbody id="dash-phc-table-body">
+            <tr><td colspan="7" style="text-align:center; padding: 24px;">Loading PHC facilities...</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- PHC Selected Drilldown Detail -->
+      <div id="phc-drilldown-panel" class="phc-detail-panel" style="display: none;">
+        <div class="detail-header">
+          <div>
+            <div id="drill-phc-name" class="detail-title">PHC Details</div>
+            <div class="detail-meta">
+              <span id="drill-phc-district">District</span> &bull; 
+              <span id="drill-phc-state">State</span> &bull; 
+              <span id="drill-phc-beds">-- Beds</span>
+            </div>
+          </div>
+          <div id="drill-overall-badge"></div>
+        </div>
+
+        <!-- Patient Footfall Metric Cards -->
+        <h3 style="font-size: 14px; text-transform: uppercase; color: var(--primary-700); margin-bottom: 10px;">Patient Footfall</h3>
+        <div class="detail-metric-grid">
+          <div class="detail-sub-card">
+            <div class="detail-sub-title">Today's Patients</div>
+            <div class="detail-sub-value" id="drill-footfall-today">--</div>
+            <div class="kpi-subtext">OPD + IPD admitted</div>
+          </div>
+          <div class="detail-sub-card">
+            <div class="detail-sub-title">Average Daily Patients</div>
+            <div class="detail-sub-value" id="drill-footfall-avg7">--</div>
+            <div class="kpi-subtext">7-day rolling average</div>
+          </div>
+          <div class="detail-sub-card">
+            <div class="detail-sub-title">7-Day Trend</div>
+            <div class="detail-sub-value" id="drill-footfall-trend7">--</div>
+            <div class="kpi-subtext" id="drill-footfall-trend7-lbl">Velocity</div>
+          </div>
+          <div class="detail-sub-card">
+            <div class="detail-sub-title">30-Day Trend</div>
+            <div class="detail-sub-value" id="drill-footfall-trend30">--</div>
+            <div class="kpi-subtext">Baseline trajectory</div>
+          </div>
+        </div>
+
+        <!-- Medicine Status Metric Cards -->
+        <h3 style="font-size: 14px; text-transform: uppercase; color: var(--primary-700); margin-bottom: 10px;">Medicine Status</h3>
+        <div class="detail-metric-grid">
+          <div class="detail-sub-card">
+            <div class="detail-sub-title">Total Tracked Medicines</div>
+            <div class="detail-sub-value" id="drill-meds-total">--</div>
+            <div class="kpi-subtext">Active formulary items</div>
+          </div>
+          <div class="detail-sub-card">
+            <div class="detail-sub-title">Approaching Shortage</div>
+            <div class="detail-sub-value" id="drill-meds-warning" style="color: var(--status-warning-dot);">--</div>
+            <div class="kpi-subtext">3 to 7 days remaining</div>
+          </div>
+          <div class="detail-sub-card">
+            <div class="detail-sub-title">Critical Medicines</div>
+            <div class="detail-sub-value" id="drill-meds-critical" style="color: var(--status-critical-dot);">--</div>
+            <div class="kpi-subtext">&lt; 3 days stock remaining</div>
+          </div>
+          <div class="detail-sub-card">
+            <div class="detail-sub-title">Medicines Nearing Expiry</div>
+            <div class="detail-sub-value" id="drill-meds-expiring" style="color: #b91c1c;">--</div>
+            <div class="kpi-subtext">Expiring within 60 days</div>
+          </div>
+        </div>
+
+        <!-- Analytics Charts Grid -->
+        <div class="charts-grid-2">
+          <div class="chart-card">
+            <div class="chart-title">Patient Footfall Over Time (30 Days)</div>
+            <div class="chart-container">
+              <canvas id="chart-drill-footfall"></canvas>
+            </div>
+          </div>
+          <div class="chart-card">
+            <div class="chart-title">Medicine Consumption Trends (Top Prescribed)</div>
+            <div class="chart-container">
+              <canvas id="chart-drill-consumption"></canvas>
+            </div>
+          </div>
+        </div>
+
+        <div class="charts-grid-2" style="margin-top: 20px;">
+          <div class="chart-card" style="grid-column: span 2;">
+            <div class="chart-title">Current Medicine Stock & Days Remaining (Top Essential Medicines)</div>
+            <div class="chart-container" style="height: 240px;">
+              <canvas id="chart-drill-stock"></canvas>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ================================================================
+         VIEW 3: INVENTORY
+         ================================================================ -->
+    <section id="view-inventory" class="view-section">
+      <div class="section-header">
+        <div>
+          <h2 class="section-title">Medicine Inventory Surveillance</h2>
+          <div class="section-subtitle">Real-time stock levels, daily consumption burn-rates, and stockout projections across all PHCs</div>
+        </div>
+      </div>
+
+      <!-- Formula and Legend Card -->
+      <div style="background: #f8fafc; border: 1px solid var(--border-card); border-radius: var(--radius-sm); padding: 12px 18px; margin-bottom: 18px; font-size: 13px; color: var(--text-muted); display: flex; justify-content: space-between; align-items: center;">
+        <div>
+          <strong>Operational Formula:</strong> <code style="background: #e2e8f0; padding: 2px 6px; border-radius: 4px; color: #0f172a;">Days Remaining = Current Stock / Average Daily Usage</code>
+        </div>
+        <div style="display: flex; gap: 14px; font-weight: 600;">
+          <span style="color: #b91c1c;">🔴 Critical: &lt; 3.0 days</span>
+          <span style="color: #d97706;">🟡 Warning: 3.0 &ndash; 7.0 days</span>
+          <span style="color: #15803d;">🟢 Normal: &ge; 7.0 days</span>
+        </div>
+      </div>
+
+      <!-- Dual Search & Filters -->
+      <div class="table-card">
+        <div class="filters-bar">
+          <div class="filter-group">
+            <input type="text" id="inv-search-medicine" class="search-input" placeholder="Search medicine..." oninput="window.appFilterInventory()">
+            <input type="text" id="inv-search-phc" class="search-input" placeholder="Search PHC or district..." oninput="window.appFilterInventory()">
+          </div>
+          <div class="filter-group">
+            <button class="btn-filter-pill active" onclick="window.appSetInventoryStatus('ALL', this)">All</button>
+            <button class="btn-filter-pill" onclick="window.appSetInventoryStatus('CRITICAL', this)">🔴 Critical (&lt;3d)</button>
+            <button class="btn-filter-pill" onclick="window.appSetInventoryStatus('WARNING', this)">🟡 Warning (3-7d)</button>
+            <button class="btn-filter-pill" onclick="window.appSetInventoryStatus('NORMAL', this)">🟢 Normal (&ge;7d)</button>
+            <button class="btn-filter-pill" onclick="window.appSetInventoryStatus('EXPIRING', this)">⏳ Near Expiry (&lt;60d)</button>
+          </div>
+        </div>
+
+        <!-- Inventory Table -->
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>PHC</th>
+              <th>District</th>
+              <th>Medicine</th>
+              <th>Category</th>
+              <th>Current Stock</th>
+              <th>Avg Daily Usage</th>
+              <th>Days Remaining</th>
+              <th>Expiry Date</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody id="inv-table-body">
+            <tr><td colspan="9" style="text-align:center; padding: 24px;">Loading inventory records...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- ================================================================
+         VIEW 4: PREDICTIONS
+         ================================================================ -->
+    <section id="view-predictions" class="view-section">
+      <div class="section-header">
+        <div>
+          <h2 class="section-title">Statistical & Trend Demand Forecasting</h2>
+          <div class="section-subtitle">Mathematical projections coupling historical patient footfall trends with clinical medicine consumption</div>
+        </div>
+        <div class="data-badge" style="background:#e0f2fe; color:#0369a1; border-color:#bae6fd;">
+          Rule-Based Statistical Calculations Only &bull; Zero Black-Box ML
+        </div>
+      </div>
+
+      <!-- Forecasting Selectors -->
+      <div class="prediction-controls-card">
+        <div class="control-item">
+          <label for="pred-select-phc">Select PHC Facility</label>
+          <select id="pred-select-phc" onchange="window.appLoadPrediction()">
+            <!-- Populated via JS -->
+          </select>
+        </div>
+        <div class="control-item">
+          <label for="pred-select-medicine">Select Medicine</label>
+          <select id="pred-select-medicine" onchange="window.appLoadPrediction()">
+            <!-- Populated via JS -->
+          </select>
+        </div>
+        <div class="control-item">
+          <label>Forecast Period</label>
+          <div class="forecast-period-btns">
+            <button class="btn-period active" onclick="window.appSetForecastDays(7, this)">7 Days</button>
+            <button class="btn-period" onclick="window.appSetForecastDays(14, this)">14 Days</button>
+            <button class="btn-period" onclick="window.appSetForecastDays(30, this)">30 Days</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Shortage Status Banner -->
+      <div id="pred-status-banner" class="shortage-banner critical-banner">
+        <div class="banner-headline">
+          <span id="pred-status-icon">🔴</span>
+          <span id="pred-status-text">SHORTAGE EXPECTED</span>
+        </div>
+        <div class="banner-details">
+          <div>Current Stock: <strong id="pred-banner-stock">--</strong></div>
+          <div>Adjusted Demand: <strong id="pred-banner-usage">--</strong>/day</div>
+          <div>Estimated Days Remaining: <strong id="pred-banner-days">--</strong></div>
+          <div>Estimated Shortage Date: <strong id="pred-banner-date">--</strong></div>
+        </div>
+      </div>
+
+      <!-- Results Grid -->
+      <div class="prediction-results-grid">
+        
+        <!-- Left Column: Patient Footfall & Transparent Math -->
+        <div style="display:flex; flex-direction: column; gap: 20px;">
+          
+          <!-- Patient Footfall Forecast Card -->
+          <div class="chart-card">
+            <div class="chart-title">
+              <span>Patient Footfall Forecast (Historical Average & Trend)</span>
+              <span id="pred-trend-badge" class="badge-status badge-warning">↗ Increasing</span>
+            </div>
+            <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 16px;">
+              <div class="detail-sub-card">
+                <div class="detail-sub-title">Today's Footfall</div>
+                <div class="detail-sub-value" id="pred-footfall-today">--</div>
+              </div>
+              <div class="detail-sub-card">
+                <div class="detail-sub-title">7-Day Average</div>
+                <div class="detail-sub-value" id="pred-footfall-avg">--</div>
+              </div>
+              <div class="detail-sub-card">
+                <div class="detail-sub-title">Expected Tomorrow</div>
+                <div class="detail-sub-value" id="pred-footfall-tomorrow">--</div>
+              </div>
+            </div>
+            <div class="chart-container" style="height: 200px;">
+              <canvas id="chart-pred-footfall"></canvas>
+            </div>
+          </div>
+
+          <!-- Connecting Patient Footfall to Medicine Demand Card -->
+          <div class="formula-card">
+            <div class="formula-header">
+              <span>⚡ Connect Patient Footfall to Medicine Demand</span>
+            </div>
+            <div class="formula-flow-box">
+              Patient Footfall increases &rarr; Expected medicine demand increases &rarr; Days of stock decrease &rarr; Shortage risk increases
+            </div>
+            <div style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: var(--radius-sm); padding: 12px; margin-bottom: 14px;">
+              <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; font-size: 13px;">
+                <div>
+                  <span style="color: var(--text-muted);">Expected Patient Change:</span><br>
+                  <strong id="pred-coupling-footfall-pct" style="color: #ea580c; font-size: 16px;">+0%</strong>
+                </div>
+                <div>
+                  <span style="color: var(--text-muted);">Adjusted Medicine Demand:</span><br>
+                  <strong id="pred-coupling-demand" style="color: #0f172a; font-size: 16px;">-- units/day</strong>
+                </div>
+              </div>
+            </div>
+            <ul class="formula-steps" id="pred-formula-steps">
+              <!-- Steps populated via JS -->
+            </ul>
+          </div>
+
+        </div>
+
+        <!-- Right Column: Medicine Historical Consumption & Stock Depletion -->
+        <div style="display:flex; flex-direction: column; gap: 20px;">
+          
+          <!-- Historical 7-Day Usage Breakdown Table -->
+          <div class="chart-card">
+            <div class="chart-title">
+              <span>Historical Medicine Consumption (Last 7 Days)</span>
+              <span id="pred-base-avg-label" style="font-size: 12px; font-weight: 600; color: var(--text-muted);">Avg: -- /day</span>
+            </div>
+            <table class="data-table" style="margin-bottom: 8px;">
+              <thead>
+                <tr>
+                  <th>Period</th>
+                  <th>Date</th>
+                  <th>Quantity Prescribed</th>
+                </tr>
+              </thead>
+              <tbody id="pred-usage-breakdown-body">
+                <!-- Populated via JS -->
+              </tbody>
+            </table>
+          </div>
+
+          <!-- Stock Depletion Projection Chart -->
+          <div class="chart-card">
+            <div class="chart-title">Projected Stock Depletion Timeline (To Zero Units)</div>
+            <div class="chart-container" style="height: 220px;">
+              <canvas id="chart-pred-depletion"></canvas>
+            </div>
+          </div>
+
+        </div>
+
+      </div>
+    </section>
+
+    <!-- ================================================================
+         VIEW 5: ACTIONS
+         ================================================================ -->
+    <section id="view-actions" class="view-section">
+      <div class="section-header">
+        <div>
+          <h2 class="section-title">Recommended Actions & Inter-PHC Redistribution</h2>
+          <div class="section-subtitle">Algorithmic pairings of surplus facilities with deficit facilities to prevent stockouts proactively</div>
+        </div>
+      </div>
+
+      <!-- Proactive Medicine Redistribution Section -->
+      <h3 style="font-size: 15px; font-weight: 700; color: var(--primary-900); text-transform: uppercase; margin-bottom: 14px;">
+        Active Medicine Redistribution Recommendations
+      </h3>
+      <div id="actions-redistribution-grid" class="actions-grid">
+        <!-- Redistribution cards populated via JS -->
+      </div>
+
+      <!-- High Patient Load Interventions -->
+      <h3 style="font-size: 15px; font-weight: 700; color: var(--primary-900); text-transform: uppercase; margin: 30px 0 14px 0;">
+        High Patient Load Capacity Warnings & Redirection
+      </h3>
+      <div id="actions-patient-load-list">
+        <!-- Patient load alerts populated via JS -->
+      </div>
+
+      <!-- Execution Audit Log -->
+      <h3 style="font-size: 15px; font-weight: 700; color: var(--primary-900); text-transform: uppercase; margin: 30px 0 14px 0;">
+        Executed Redistribution Audit Trail
+      </h3>
+      <div class="table-card">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Timestamp</th>
+              <th>Source PHC (Surplus)</th>
+              <th>Destination PHC (Deficit)</th>
+              <th>Medicine</th>
+              <th>Transferred Qty</th>
+              <th>Status</th>
+              <th>Audit Rationale</th>
+            </tr>
+          </thead>
+          <tbody id="actions-history-body">
+            <!-- Populated via JS -->
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- ================================================================
+         VIEW 6: EMERGENCY
+         ================================================================ -->
+    <section id="view-emergency" class="view-section">
+      <div class="section-header">
+        <div>
+          <h2 class="section-title">Emergency Simulation Center</h2>
+          <div class="section-subtitle">Stress-test PHC network resilience against sudden epidemic outbreaks and supply chain disruptions</div>
+        </div>
+      </div>
+
+      <!-- Simulation Controls Panel -->
+      <div class="emergency-controls-panel">
+        <div class="emergency-title">
+          <span>🚨 Epidemic & Supply Disruption Simulator</span>
+        </div>
+        <div class="emergency-desc">
+          Adjust the two primary systemic variables to simulate emergency surge dynamics across all 29 Primary Health Centres.
+        </div>
+
+        <div class="emergency-vars-grid">
+          <!-- Variable 1: Patient Footfall -->
+          <div class="sim-var-box">
+            <div class="sim-var-label">1. Patient Footfall Surge</div>
+            <div class="sim-btn-group">
+              <button class="btn-sim-option" onclick="window.appSetSimFootfall(0, this)">Normal</button>
+              <button class="btn-sim-option" onclick="window.appSetSimFootfall(10, this)">+10%</button>
+              <button class="btn-sim-option" onclick="window.appSetSimFootfall(20, this)">+20%</button>
+              <button class="btn-sim-option active" onclick="window.appSetSimFootfall(30, this)">+30%</button>
+              <button class="btn-sim-option" onclick="window.appSetSimFootfall(50, this)">+50%</button>
+            </div>
+          </div>
+
+          <!-- Variable 2: Medicine Supply -->
+          <div class="sim-var-box">
+            <div class="sim-var-label">2. Medicine Supply Disruption</div>
+            <div class="sim-btn-group">
+              <button class="btn-sim-option" onclick="window.appSetSimSupply(0, this)">Normal</button>
+              <button class="btn-sim-option" onclick="window.appSetSimSupply(10, this)">-10%</button>
+              <button class="btn-sim-option active-supply" onclick="window.appSetSimSupply(20, this)">-20%</button>
+              <button class="btn-sim-option" onclick="window.appSetSimSupply(30, this)">-30%</button>
+            </div>
+          </div>
+
+          <!-- Run Button -->
+          <div>
+            <button class="btn-run-sim" onclick="window.appRunEmergencySimulation()">
+              ▶ Run Simulation
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Emergency Impact Summary -->
+      <h3 style="font-size: 15px; font-weight: 700; color: var(--primary-900); text-transform: uppercase; margin-bottom: 14px;">
+        Emergency Impact Assessment
+      </h3>
+      <div class="emergency-impact-grid">
+        <div class="impact-card">
+          <div class="impact-label">PHCs at Medicine Shortage Risk</div>
+          <div class="impact-num" id="sim-impact-phcs">--</div>
+          <div style="font-size: 12px; color: var(--text-muted);">Facilities facing stockouts</div>
+        </div>
+        <div class="impact-card">
+          <div class="impact-label">PHCs Facing High Patient Load</div>
+          <div class="impact-num" id="sim-impact-load" style="color: #ea580c;">--</div>
+          <div style="font-size: 12px; color: var(--text-muted);">Outpatient surges exceeding buffer</div>
+        </div>
+        <div class="impact-card">
+          <div class="impact-label">Medicines in Critical Supply</div>
+          <div class="impact-num" id="sim-impact-meds" style="color: #b91c1c;">--</div>
+          <div style="font-size: 12px; color: var(--text-muted);">Formularies with &lt;3d network inventory</div>
+        </div>
+      </div>
+
+      <!-- Comparison Cards & Chart -->
+      <div class="charts-grid-2" style="margin-bottom: 24px;">
+        <div class="chart-card">
+          <div class="chart-title">Network Stockouts: Baseline vs Crisis Simulation</div>
+          <div class="chart-container">
+            <canvas id="chart-emergency-comparison"></canvas>
+          </div>
+        </div>
+
+        <div class="chart-card" style="display:flex; flex-direction:column; justify-content:space-between;">
+          <div class="chart-title">Example PHC Emergency Metric Trajectory</div>
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+            <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: var(--radius-sm); padding: 14px;">
+              <div style="font-size: 11px; font-weight:700; color: #64748b; text-transform:uppercase;">Normal State</div>
+              <div style="margin-top: 6px; font-size: 13px; line-height: 1.8;">
+                <div>Patient Demand: <strong>300/day</strong></div>
+                <div>Medicine Demand: <strong>100/day</strong></div>
+                <div>Stock: <strong>500 units</strong></div>
+                <div>Days Remaining: <strong style="color: #15803d;">5.0 days</strong></div>
+              </div>
+            </div>
+            <div style="background: #fff1f2; border: 1px solid #fecdd3; border-radius: var(--radius-sm); padding: 14px;">
+              <div style="font-size: 11px; font-weight:700; color: #be123c; text-transform:uppercase;">Emergency State</div>
+              <div style="margin-top: 6px; font-size: 13px; line-height: 1.8;">
+                <div>Patient Demand: <strong id="sim-ex-patient">390/day (+30%)</strong></div>
+                <div>Medicine Demand: <strong id="sim-ex-demand">130/day</strong></div>
+                <div>Stock: <strong id="sim-ex-stock">400 units (-20%)</strong></div>
+                <div>Days Remaining: <strong id="sim-ex-days" style="color: #dc2626;">2.7 days (🔴 Critical)</strong></div>
+              </div>
+            </div>
+          </div>
+          <div style="margin-top: 14px; font-size: 12px; color: #334155; background: #f1f5f9; padding: 12px 14px; border-radius: var(--radius-sm); line-height: 1.7; border-left: 3px solid #0d9488;">
+            <div style="font-weight: 700; color: #0f172a; margin-bottom: 4px; text-transform: uppercase; font-size: 11px; letter-spacing: 0.5px;">Rule-Based Emergency Mathematical Formulas:</div>
+            <div>&bull; <strong>Demand = Base Demand &times; (1 + Footfall Increase)</strong></div>
+            <div>&bull; <strong>Stock = Base Stock &times; (1 &minus; Supply Disruption)</strong></div>
+            <div>&bull; <strong>Days Remaining = Crisis Stock / Adjusted Daily Demand</strong></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Emergency Redistribution Recommendations -->
+      <h3 style="font-size: 15px; font-weight: 700; color: var(--primary-900); text-transform: uppercase; margin-bottom: 14px;">
+        Generated Crisis Redistribution Actions
+      </h3>
+      <div id="sim-emergency-actions-grid" class="actions-grid">
+        <!-- Emergency actions populated via JS -->
+      </div>
+    </section>
+
+  </main>
+
+  <!-- ====================================================================
+       DETAILS MODAL (For Actions / PHC Details)
+       ==================================================================== -->
+  <div id="modal-details" class="modal-overlay">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3 id="modal-title" class="modal-title">Action Details</h3>
+        <button class="btn-close-modal" onclick="window.appCloseModal()">&times;</button>
+      </div>
+      <div id="modal-body">
+        <!-- Injected via JS -->
+      </div>
+    </div>
+  </div>
+
+  <!-- ====================================================================
+       TOAST CONTAINER
+       ==================================================================== -->
+  <div id="toast-container" class="toast-container"></div>
+
+  <!-- Bundled scripts -->
+  <script src="vendor/chart.umd.min.js"></script>
+  <script src="vendor/leaflet.js"></script>
+  <script src="js/charts.js"></script>
+  <script src="js/map.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
